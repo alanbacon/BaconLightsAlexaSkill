@@ -11,7 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific
 // language governing permissions and limitations under the License.
 
-exports.handler = function (request, context) {
+export function handler(request, context) {
   if (
     request.directive.header.namespace === 'Alexa.Discovery' &&
     request.directive.header.name === 'Discover'
@@ -180,4 +180,4 @@ exports.handler = function (request, context) {
     log('DEBUG', 'Alexa.PowerController ', JSON.stringify(response));
     context.succeed(response);
   }
-};
+}

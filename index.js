@@ -1,3 +1,3 @@
-const Skill = require('./build/src/index');
+import Skill from './build/src/index';
 
 module.exports = Skill;

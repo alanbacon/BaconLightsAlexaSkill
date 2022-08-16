@@ -1,3 +1,5 @@
-import { handler } from './build/src/index.js';
+import { handler as internalHandler } from './build/src/index.js';
 
-module.exports = { handler };
+export function handler(...args) {
+  internalHandler(...args);
+}

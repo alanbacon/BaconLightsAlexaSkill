@@ -27,9 +27,7 @@ function sendInvalidAuthCredResponse(context): void {
 export function handler(request, context) {
   if (!isVerifiedUser(request.directive.payload.scope.token)) {
     sendInvalidAuthCredResponse(context);
-  }
-
-  if (
+  } else if (
     request.directive.header.namespace === 'Alexa.Discovery' &&
     request.directive.header.name === 'Discover'
   ) {

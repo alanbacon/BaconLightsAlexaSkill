@@ -25,7 +25,7 @@ function sendInvalidAuthCredResponse(context): void {
 }
 
 export function handler(request, context) {
-  if (!isVerifiedUser(request.directive.endpoint.scope.token)) {
+  if (!isVerifiedUser(request.directive.payload.scope.token)) {
     sendInvalidAuthCredResponse(context);
   }
 

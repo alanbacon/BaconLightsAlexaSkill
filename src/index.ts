@@ -2,10 +2,8 @@ import { v4 as uuidV4 } from 'uuid';
 import { getAmazonUserProfile } from './utils/amazonProfile.js';
 
 async function isVerifiedUser(bearerToken: string): Promise<boolean> {
-  console.log('isVerifiedUser');
   const verfiedUserEmailAddresses = new Set(['the_resonance@hotmail.com']);
   const userProfile = await getAmazonUserProfile(bearerToken);
-  console.log(JSON.stringify(userProfile, null, 2));
   return verfiedUserEmailAddresses.has(userProfile.email);
 }
 
@@ -26,8 +24,8 @@ function sendInvalidAuthCredResponse(context): void {
   });
 }
 
-export function handler(request, context) {
-  if (!isVerifiedUser(request.directive.payload.scope.token)) {
+export async function handler(request, context) {
+  if (!(await isVerifiedUser(request.directive.payload.scope.token))) {
     sendInvalidAuthCredResponse(context);
   } else if (
     request.directive.header.namespace === 'Alexa.Discovery' &&

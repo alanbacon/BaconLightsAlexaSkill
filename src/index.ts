@@ -7,24 +7,26 @@ async function isVerifiedUser(bearerToken: string): Promise<boolean> {
   return verfiedUserEmailAddresses.has(userProfile.email);
 }
 
-function sendInvalidAuthCredResponse(): void {}
+function sendInvalidAuthCredResponse(context): void {
+  context.succeed({
+    event: {
+      header: {
+        namespace: 'Alexa',
+        name: 'ErrorResponse',
+        messageId: uuidV4(),
+        payloadVersion: '3',
+      },
+      payload: {
+        type: 'INVALID_AUTHORIZATION_CREDENTIAL',
+        message: 'you are not authorized to use this skill',
+      },
+    },
+  });
+}
 
 export function handler(request, context) {
   if (!isVerifiedUser(request.directive.endpoint.scope.token)) {
-    context.succeed({
-      event: {
-        header: {
-          namespace: 'Alexa',
-          name: 'ErrorResponse',
-          messageId: uuidV4(),
-          payloadVersion: '3',
-        },
-        payload: {
-          type: 'INVALID_AUTHORIZATION_CREDENTIAL',
-          message: 'you are not authorized to use this skill',
-        },
-      },
-    });
+    sendInvalidAuthCredResponse(context);
   }
 
   if (

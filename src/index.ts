@@ -1,17 +1,32 @@
-// -*- coding: utf-8 -*-
+import { v4 as uuidV4 } from 'uuid';
+import { getAmazonUserProfile } from './utils/amazonProfile.js';
 
-// Copyright 2021 Amazon.com, Inc. or its affiliates. All Rights Reserved.
-//
-// SPDX-License-Identifier: LicenseRef-.amazon.com.-AmznSL-1.0
-// Licensed under the Amazon Software License (the "License")
-// You may not use this file except in compliance with the License.
-// A copy of the License is located at http://aws.amazon.com/asl/
-//
-// This file is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, express or implied. See the License for the specific
-// language governing permissions and limitations under the License.
+async function isVerifiedUser(bearerToken: string): Promise<boolean> {
+  const verfiedUserEmailAddresses = new Set(['the_resonance@hotmail.com']);
+  const userProfile = await getAmazonUserProfile(bearerToken);
+  return verfiedUserEmailAddresses.has(userProfile.email);
+}
+
+function sendInvalidAuthCredResponse(): void {}
 
 export function handler(request, context) {
+  if (!isVerifiedUser(request.directive.endpoint.scope.token)) {
+    context.succeed({
+      event: {
+        header: {
+          namespace: 'Alexa',
+          name: 'ErrorResponse',
+          messageId: uuidV4(),
+          payloadVersion: '3',
+        },
+        payload: {
+          type: 'INVALID_AUTHORIZATION_CREDENTIAL',
+          message: 'you are not authorized to use this skill',
+        },
+      },
+    });
+  }
+
   if (
     request.directive.header.namespace === 'Alexa.Discovery' &&
     request.directive.header.name === 'Discover'

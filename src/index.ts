@@ -165,10 +165,12 @@ export async function handler(
       // Make the call to your device cloud for control
       // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
       await switchPowerOn('study');
+      powerResult = 'ON';
     } else if (requestMethod === 'TurnOff') {
       // Make the call to your device cloud for control and check for success
       // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
       await switchPowerOff('study');
+      powerResult = 'OFF';
     }
     // Return the updated powerState.  Always include EndpointHealth in your Alexa.Response
     const contextResult = {

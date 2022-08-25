@@ -1,7 +1,15 @@
 import { v4 as uuidV4 } from 'uuid';
 import { getAmazonUserProfile } from './utils/amazonProfile.js';
+import { switchPowerOff, switchPowerOn } from './utils/lightsService.js';
 
-async function isVerifiedUser(bearerToken: string): Promise<boolean> {
+async function isVerifiedUser(request: Alexa.API.Request): Promise<boolean> {
+  let bearerToken: string;
+  if (request.directive.header.namespace === 'Alexa.Discovery') {
+    bearerToken = request.directive.payload.scope.token;
+  } else {
+    bearerToken = request.directive.endpoint.scope.token;
+  }
+
   const verfiedUserEmailAddresses = new Set(['the_resonance@hotmail.com']);
   const userProfile = await getAmazonUserProfile(bearerToken);
   return verfiedUserEmailAddresses.has(userProfile.email);
@@ -24,10 +32,13 @@ function sendInvalidAuthCredResponse(context): void {
   });
 }
 
-export async function handler(request, context) {
+export async function handler(
+  request: Alexa.API.Request,
+  context,
+): Promise<void> {
   console.log(JSON.stringify({ request }, null, 2));
 
-  if (!(await isVerifiedUser(request.directive.endpoint.scope.token))) {
+  if (!(await isVerifiedUser(request))) {
     sendInvalidAuthCredResponse(context);
   } else if (
     request.directive.header.namespace === 'Alexa.Discovery' &&
@@ -139,7 +150,7 @@ export async function handler(request, context) {
     console.log(message + message1 + message2);
   }
 
-  function handlePowerControl(request, context) {
+  async function handlePowerControl(request, context): Promise<void> {
     // get device ID passed in during discovery
     const requestMethod = request.directive.header.name;
     const responseHeader = request.directive.header;
@@ -153,11 +164,11 @@ export async function handler(request, context) {
     if (requestMethod === 'TurnOn') {
       // Make the call to your device cloud for control
       // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
-      powerResult = 'ON';
+      await switchPowerOn('study');
     } else if (requestMethod === 'TurnOff') {
       // Make the call to your device cloud for control and check for success
       // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
-      powerResult = 'OFF';
+      await switchPowerOff('study');
     }
     // Return the updated powerState.  Always include EndpointHealth in your Alexa.Response
     const contextResult = {

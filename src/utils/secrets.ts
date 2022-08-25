@@ -18,8 +18,11 @@ export async function getLightServiceCert(): Promise<{
 
   const secretCert = JSON.parse(secretCertRaw.SecretString) as SecretCert;
 
+  const pemBuffer = Buffer.from(secretCert.LIGHTS_SERVICE_PEM, 'base64');
+  const keyBuffer = Buffer.from(secretCert.LIGHTS_SERVICE_KEY, 'base64');
+
   return {
-    cert: secretCert.LIGHTS_SERVICE_PEM,
-    key: secretCert.LIGHTS_SERVICE_KEY,
+    cert: pemBuffer.toString(),
+    key: keyBuffer.toString(),
   };
 }

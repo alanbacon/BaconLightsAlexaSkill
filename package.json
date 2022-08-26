@@ -37,7 +37,7 @@
   "license": "Apache-2.0",
   "dependencies": {
     "aws-sdk": "^2.1202.0",
-    "node-fetch": "^3.2.10",
+    "node-fetch": "3.2.8",
     "tslib": "~2.4",
     "uuid": "^8.3.2"
   },

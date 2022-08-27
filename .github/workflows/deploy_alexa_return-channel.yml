@@ -1,4 +1,4 @@
-name: Deploy Main
+name: Deploy Alexa Return Channel
 
 on:
   push:
@@ -8,6 +8,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./alexaReturnChannel
 
     steps:
       - uses: actions/checkout@v2
@@ -21,12 +24,12 @@ jobs:
       - name: zip
         uses: montudor/action-zip@v0.1.0
         with:
-          args: zip -qq -r ./bundle.zip ./
+          args: zip -qq -r ./bundle.zip ./alexaReturnChannel
       - name: default deploy
         uses: appleboy/lambda-action@master
         with:
           aws_access_key_id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws_secret_access_key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws_region: eu-west-1
-          function_name: alexa-bacon-lights-skill-backend
+          function_name: alexa-bacon-lights-return-channel
           zip_file: bundle.zip

@@ -1,6 +1,10 @@
 import { v4 as uuidV4 } from 'uuid';
 import { getAmazonUserProfile } from './utils/amazonProfile.js';
-import { switchPowerOff, switchPowerOn } from './utils/lightsService.js';
+import {
+  switchPowerOff,
+  switchPowerOn,
+  getRoomState,
+} from './utils/lightsService.js';
 
 async function isVerifiedUser(request: Alexa.API.Request): Promise<boolean> {
   let bearerToken: string;
@@ -13,6 +17,14 @@ async function isVerifiedUser(request: Alexa.API.Request): Promise<boolean> {
   const verfiedUserEmailAddresses = new Set(['the_resonance@hotmail.com']);
   const userProfile = await getAmazonUserProfile(bearerToken);
   return verfiedUserEmailAddresses.has(userProfile.email);
+}
+
+function cleanseTokenFromRequest(request: Alexa.API.Request): void {
+  if (request.directive.header.namespace === 'Alexa.Discovery') {
+    request.directive.payload.scope.token = '**** revoked ****';
+  } else {
+    request.directive.endpoint.scope.token = '**** revoked ****';
+  }
 }
 
 function sendInvalidAuthCredResponse(context): void {
@@ -44,23 +56,29 @@ export async function handler(
     request.directive.header.namespace === 'Alexa.Discovery' &&
     request.directive.header.name === 'Discover'
   ) {
-    log('DEBUG:', 'Discover request', JSON.stringify(request));
+    log('DEBUG:', 'Discover request ', JSON.stringify(request));
     handleDiscovery(request, context);
   } else if (request.directive.header.namespace === 'Alexa.PowerController') {
     if (
       request.directive.header.name === 'TurnOn' ||
       request.directive.header.name === 'TurnOff'
     ) {
-      log('DEBUG:', 'TurnOn or TurnOff Request', JSON.stringify(request));
-      handlePowerControl(request, context);
+      log('DEBUG:', 'TurnOn or TurnOff Request ', JSON.stringify(request));
+      await handlePowerControl(request, context);
     }
+  } else if (
+    request.directive.header.namespace === 'Alexa' &&
+    request.directive.header.name === 'ReportState'
+  ) {
+    await handleStateReport(request);
   } else if (
     request.directive.header.namespace === 'Alexa.Authorization' &&
     request.directive.header.name === 'AcceptGrant'
   ) {
     handleAuthorization(request, context);
   } else {
-    log('DEBUG:', 'unhandled request', JSON.stringify(request));
+    cleanseTokenFromRequest(request);
+    log('DEBUG:', 'unhandled request ', JSON.stringify(request));
   }
 
   function handleAuthorization(request, context) {
@@ -111,7 +129,7 @@ export async function handler(
                     name: 'powerState',
                   },
                 ],
-                retrievable: true,
+                retrievable: false,
               },
             },
             {
@@ -208,6 +226,47 @@ export async function handler(
       },
     };
     log('DEBUG', 'Alexa.PowerController ', JSON.stringify(response));
+    context.succeed(response);
+  }
+
+  async function handleStateReport(request, context) {
+    const roomState = await getRoomState('study');
+
+    const response = {
+      event: {
+        header: {
+          namespace: 'Alexa',
+          name: 'StateReport',
+          messageId: uuidV4(),
+          correlationToken: uuidV4(),
+          payloadVersion: '3',
+        },
+        endpoint: {
+          endpointId: 'sample-bulb-01',
+        },
+        payload: {},
+      },
+      context: {
+        properties: [
+          {
+            namespace: 'Alexa.PowerController',
+            name: 'powerState',
+            value: roomState.on ? 'ON' : 'OFF',
+            timeOfSample: new Date().toISOString(),
+            uncertaintyInMilliseconds: 0,
+          },
+          {
+            namespace: 'Alexa.EndpointHealth',
+            name: 'connectivity',
+            value: {
+              value: 'OK',
+            },
+            timeOfSample: new Date().toISOString(),
+            uncertaintyInMilliseconds: 0,
+          },
+        ],
+      },
+    };
     context.succeed(response);
   }
 }

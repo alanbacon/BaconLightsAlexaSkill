@@ -71,3 +71,20 @@ export async function switchPowerOff(roomName: string): Promise<void> {
     throw new Error('failed to set power');
   }
 }
+
+export async function getRoomState(
+  roomName: string,
+): Promise<LightsService.API.RoomState> {
+  const resp = await fetchPopulateBody(
+    `${config.lightsServiceApiUrl}/room/${roomName}`,
+    {
+      headers: lightsServiceHeaders,
+      method: 'GET',
+    },
+  );
+  if (!resp.ok) {
+    throw new Error('failed to get room state');
+  }
+
+  return resp.populatedBody as LightsService.API.RoomState;
+}

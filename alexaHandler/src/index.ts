@@ -229,7 +229,7 @@ export async function handler(
     context.succeed(response);
   }
 
-  async function handleStateReport(request, context) {
+  async function handleStateReport(_request, context) {
     const roomState = await getRoomState('study');
 
     const response = {

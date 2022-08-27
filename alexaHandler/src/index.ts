@@ -70,7 +70,7 @@ export async function handler(
     request.directive.header.namespace === 'Alexa' &&
     request.directive.header.name === 'ReportState'
   ) {
-    await handleStateReport(request);
+    await handleStateReport(request, context);
   } else if (
     request.directive.header.namespace === 'Alexa.Authorization' &&
     request.directive.header.name === 'AcceptGrant'

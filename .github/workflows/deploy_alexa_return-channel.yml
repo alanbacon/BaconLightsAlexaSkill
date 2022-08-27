@@ -17,10 +17,14 @@ jobs:
       - uses: volta-cli/action@v1
         env:
           CI: true
-      - name: zip
-        uses: montudor/action-zip@v0.1.0
-        with:
-          args: zip -qq -r ./bundle.zip ./alexaReturnChannel/
+
+      - name: Install zip
+        uses: montudor/action-zip@v1
+
+      - name: Zip output
+        run: zip -qq -r bundle.zip ./
+        working-directory: ./alexaReturnChannel
+
       - name: default deploy
         uses: appleboy/lambda-action@master
         with:

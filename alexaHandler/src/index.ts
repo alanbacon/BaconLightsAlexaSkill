@@ -1,30 +1,118 @@
 import { v4 as uuidV4 } from 'uuid';
+import { writeReturnChannelTokens } from './utils/returnChannelTokenStore.js';
+import { config } from './utils/config.js';
 import { getAmazonUserProfile } from './utils/amazonProfile.js';
+import { getAlexaClientId } from './utils/secrets.js';
 import {
   switchPowerOff,
   switchPowerOn,
   getRoomState,
 } from './utils/lightsService.js';
 
-async function isVerifiedUser(request: Alexa.API.Request): Promise<boolean> {
+function cleanseTokenFromRequest(request: Alexa.API.Request): void {
+  let bearerToken: string | undefined;
+  if (request.directive.header.namespace === 'Alexa.Discovery') {
+    bearerToken = request.directive.payload?.scope?.token;
+    if (bearerToken) {
+      request.directive.payload!.scope!.token = '**** hidden ****';
+    }
+  } else if (request.directive.header.namespace === 'Alexa.Authorization') {
+    bearerToken = request.directive.payload.grantee?.token;
+    if (bearerToken) {
+      request.directive.payload.grantee!.token = '**** hidden ****';
+    }
+  } else {
+    bearerToken = request.directive.endpoint?.scope?.token;
+    if (bearerToken) {
+      request.directive.endpoint!.scope!.token = '**** hidden ****';
+    }
+  }
+}
+
+function getBearerTokenFromRequest(request: Alexa.API.Request): string {
   let bearerToken: string;
   if (request.directive.header.namespace === 'Alexa.Discovery') {
-    bearerToken = request.directive.payload.scope.token;
+    bearerToken = request.directive.payload?.scope?.token || '';
+  } else if (request.directive.header.namespace === 'Alexa.Authorization') {
+    bearerToken = request.directive.payload.grantee?.token || '';
   } else {
-    bearerToken = request.directive.endpoint.scope.token;
+    bearerToken = request.directive.endpoint?.scope?.token || '';
+  }
+
+  return bearerToken;
+}
+
+async function getUsersEmailAddress(
+  request: Alexa.API.Request,
+): Promise<string> {
+  const bearerToken = getBearerTokenFromRequest(request);
+
+  if (!bearerToken) {
+    return '';
+  }
+
+  const userProfile = await getAmazonUserProfile(bearerToken);
+  return userProfile.email;
+}
+
+async function isVerifiedUser(request: Alexa.API.Request): Promise<boolean> {
+  const userEmail = await getUsersEmailAddress(request);
+
+  if (!userEmail) {
+    return false;
   }
 
   const verfiedUserEmailAddresses = new Set(['the_resonance@hotmail.com']);
-  const userProfile = await getAmazonUserProfile(bearerToken);
-  return verfiedUserEmailAddresses.has(userProfile.email);
+  return verfiedUserEmailAddresses.has(userEmail);
 }
 
-function cleanseTokenFromRequest(request: Alexa.API.Request): void {
-  if (request.directive.header.namespace === 'Alexa.Discovery') {
-    request.directive.payload.scope.token = '**** revoked ****';
-  } else {
-    request.directive.endpoint.scope.token = '**** revoked ****';
+type TokenResp = {
+  access_token: string;
+  token_type: string;
+  expires_in: number;
+  refresh_token: string;
+};
+
+async function requestLWAToken(
+  code: string,
+  clientId: string,
+  clientSecret: string,
+): Promise<TokenResp> {
+  const resp = await fetch(config.awsLwaEndpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'authorization_code',
+      code,
+      client_id: clientId,
+      client_secret: clientSecret,
+    }),
+  });
+
+  if (!resp.ok) {
+    throw new Error('failed to request LWA token');
   }
+
+  return (await resp.json()) as TokenResp;
+}
+
+async function generateReturnChannelAccessToken(
+  request: Alexa.API.Request,
+): Promise<void> {
+  const alexaClientId = await getAlexaClientId();
+  const userEmail = await getUsersEmailAddress(request);
+  const tokenResp = await requestLWAToken(
+    request.directive.payload.grant?.code || '',
+    alexaClientId.clientId,
+    alexaClientId.clientSecret,
+  );
+  await writeReturnChannelTokens(
+    userEmail,
+    tokenResp.access_token,
+    tokenResp.refresh_token,
+  );
 }
 
 function sendInvalidAuthCredResponse(context): void {
@@ -75,14 +163,18 @@ export async function handler(
     request.directive.header.namespace === 'Alexa.Authorization' &&
     request.directive.header.name === 'AcceptGrant'
   ) {
-    handleAuthorization(request, context);
+    await handleAuthorization(request, context);
   } else {
     cleanseTokenFromRequest(request);
     log('DEBUG:', 'unhandled request ', JSON.stringify(request));
   }
 
-  function handleAuthorization(request, context) {
+  async function handleAuthorization(
+    request: Alexa.API.Request,
+    context,
+  ): Promise<void> {
     // Send the AcceptGrant response
+    await generateReturnChannelAccessToken(request);
     const payload = {};
     const header = request.directive.header;
     header.name = 'AcceptGrant.Response';

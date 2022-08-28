@@ -7,7 +7,7 @@ import { getAlexaClientId } from './utils/secrets.js';
 import {
   switchPowerOff,
   switchPowerOn,
-  getRoomState,
+  //getRoomState,
 } from './utils/lightsService.js';
 
 function cleanseTokenFromRequest(request: Alexa.API.Request): void {

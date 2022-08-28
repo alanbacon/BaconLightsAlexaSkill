@@ -223,6 +223,7 @@ export async function handler(
                   },
                 ],
                 retrievable: false,
+                proactivelyReported: true,
               },
             },
             {
@@ -331,7 +332,7 @@ export async function handler(
           namespace: 'Alexa',
           name: 'StateReport',
           messageId: uuidV4(),
-          correlationToken: uuidV4(),
+          correlationToken: request.directive.header.messageId,
           payloadVersion: '3',
         },
         endpoint: {

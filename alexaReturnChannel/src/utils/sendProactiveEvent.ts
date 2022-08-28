@@ -48,8 +48,6 @@ export async function sendProactiveEvent(
     }),
   });
 
-  console.log(resp);
-
   if (!resp.ok) {
     throw new Error('failed to send proactive event');
   }

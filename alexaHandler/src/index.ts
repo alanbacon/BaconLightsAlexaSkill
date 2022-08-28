@@ -222,7 +222,7 @@ export async function handler(
                     name: 'powerState',
                   },
                 ],
-                retrievable: true,
+                retrievable: false,
               },
             },
             {

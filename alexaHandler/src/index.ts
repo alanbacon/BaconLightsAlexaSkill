@@ -342,13 +342,13 @@ export async function handler(
       },
       context: {
         properties: [
-          {
-            namespace: 'Alexa.PowerController',
-            name: 'powerState',
-            value: roomState.on ? 'ON' : 'OFF',
-            timeOfSample: new Date().toISOString(),
-            uncertaintyInMilliseconds: 0,
-          },
+          // {
+          //   namespace: 'Alexa.PowerController',
+          //   name: 'powerState',
+          //   value: roomState.on ? 'ON' : 'OFF',
+          //   timeOfSample: new Date().toISOString(),
+          //   uncertaintyInMilliseconds: 0,
+          // },
           {
             namespace: 'Alexa.EndpointHealth',
             name: 'connectivity',

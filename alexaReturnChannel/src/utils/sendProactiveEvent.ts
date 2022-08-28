@@ -28,19 +28,24 @@ export async function sendProactiveEvent(
           },
           endpointId: 'sample-bulb-01',
         },
-        payload: {},
-      },
-      context: {
-        properties: [
-          {
-            namespace: 'Alexa.PowerController',
-            name: 'powerState',
-            value: power,
-            timeOfSample: new Date().toISOString(),
-            uncertaintyInMilliseconds: 0,
+        payload: {
+          change: {
+            cause: {
+              type: 'PHYSICAL_INTERACTION',
+            },
+            properties: [
+              {
+                namespace: 'Alexa.PowerController',
+                name: 'powerState',
+                value: power,
+                timeOfSample: new Date().toISOString(),
+                uncertaintyInMilliseconds: 0,
+              },
+            ],
           },
-        ],
+        },
       },
+      context: {},
     }),
   });
 

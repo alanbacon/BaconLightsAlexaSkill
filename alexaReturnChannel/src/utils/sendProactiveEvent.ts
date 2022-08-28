@@ -16,9 +16,8 @@ export async function sendProactiveEvent(
       event: {
         header: {
           namespace: 'Alexa',
-          name: 'Response',
+          name: 'ChangeReport',
           messageId: uuidV4(),
-          correlationToken: uuidV4(),
           payloadVersion: '3',
         },
         endpoint: {

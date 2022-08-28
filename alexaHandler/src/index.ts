@@ -1,3 +1,4 @@
+import fetch from 'node-fetch';
 import { v4 as uuidV4 } from 'uuid';
 import { writeReturnChannelTokens } from './utils/returnChannelTokenStore.js';
 import { config } from './utils/config.js';

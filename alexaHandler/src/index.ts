@@ -324,7 +324,7 @@ export async function handler(
   }
 
   async function handleStateReport(_request, context) {
-    const roomState = await getRoomState('study');
+    //const roomState = await getRoomState('study');
 
     const response = {
       event: {

@@ -6,6 +6,7 @@ export async function sendProactiveEvent(
   power: 'ON' | 'OFF',
   accessToken: string,
 ): Promise<void> {
+  console.log(`accessToken: ${accessToken}`);
   const resp = await fetch(config.proactiveEventEndpoint, {
     method: 'POST',
     headers: {

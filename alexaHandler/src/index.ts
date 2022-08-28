@@ -109,6 +109,9 @@ async function generateReturnChannelAccessToken(
     alexaClientId.clientId,
     alexaClientId.clientSecret,
   );
+  console.log(
+    `write return channel tokens: ${tokenResp.access_token} ${tokenResp.refresh_token}`,
+  );
   await writeReturnChannelTokens(
     userEmail,
     tokenResp.access_token,

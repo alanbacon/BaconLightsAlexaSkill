@@ -8,7 +8,7 @@ export async function writeReturnChannelTokens(
   token: string,
   refreshToken: string,
 ): Promise<void> {
-  await ddb
+  const resp = await ddb
     .putItem({
       TableName: config.returnChannelTokenTableName,
       Item: {
@@ -18,4 +18,6 @@ export async function writeReturnChannelTokens(
       },
     })
     .promise();
+
+  console.log(`ddb resp ${JSON.stringify(resp)}`);
 }

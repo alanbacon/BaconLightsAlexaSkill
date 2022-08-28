@@ -4,14 +4,20 @@ import { getAllReturnChannelTokens } from './utils/returnChannelTokenStore.js';
 export async function handler(event: {
   power: 'ON' | 'OFF';
 }): Promise<{ statusCode: number }> {
-  const userTokens = await getAllReturnChannelTokens();
+  try {
+    const userTokens = await getAllReturnChannelTokens();
 
-  for (const userToken of userTokens) {
-    await sendProactiveEvent(event.power, userToken.token);
+    for (const userToken of userTokens) {
+      await sendProactiveEvent(event.power, userToken.token);
+    }
+
+    const response = {
+      statusCode: 200,
+    };
+    return response;
+  } catch (err) {
+    return {
+      statusCode: 500,
+    };
   }
-
-  const response = {
-    statusCode: 200,
-  };
-  return response;
 }

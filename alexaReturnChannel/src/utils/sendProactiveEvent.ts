@@ -6,7 +6,7 @@ export async function sendProactiveEvent(
   power: 'ON' | 'OFF',
   accessToken: string,
 ): Promise<void> {
-  await fetch(config.proactiveEventEndpoint, {
+  const resp = await fetch(config.proactiveEventEndpoint, {
     method: 'POST',
     headers: {
       Authorization: `Bearer ${accessToken}`,
@@ -43,4 +43,10 @@ export async function sendProactiveEvent(
       },
     }),
   });
+
+  console.log(resp);
+
+  if (!resp.ok) {
+    throw new Error('failed to send proactive event');
+  }
 }

@@ -1,6 +1,6 @@
 import https from 'https';
 import fetch, { Response } from 'node-fetch';
-import { config } from './config.js';
+import { config, deviceDefinitions, IDeviceDefinition } from './config.js';
 import { getLightServiceCert } from './secrets.js';
 
 let httpsAgent: https.Agent;
@@ -26,7 +26,7 @@ interface PopulatedResponse extends Response {
 
 async function fetchPopulateBody(
   url: string,
-  opts?,
+  opts?: object,
 ): Promise<PopulatedResponse> {
   if (!httpsAgent) {
     await createHttpsAgent();
@@ -74,7 +74,7 @@ export async function switchPowerOff(roomName: string): Promise<void> {
 
 export async function getRoomState(
   roomName: string,
-): Promise<LightsService.API.RoomState> {
+): Promise<LightsService.API.IRoomState> {
   const resp = await fetchPopulateBody(
     `${config.lightsServiceApiUrl}/room/${roomName}`,
     {
@@ -86,5 +86,23 @@ export async function getRoomState(
     throw new Error('failed to get room state');
   }
 
-  return resp.populatedBody as LightsService.API.RoomState;
+  return resp.populatedBody as LightsService.API.IRoomState;
+}
+
+type DevicesByEndpointId = Record<string, IDeviceDefinition | undefined>;
+
+export function getRoomNameFromEndpointId(
+  endpointId: string,
+): string | undefined {
+  const devicesByEndpointId = deviceDefinitions.reduce(
+    (
+      devices: DevicesByEndpointId,
+      d: IDeviceDefinition,
+    ): DevicesByEndpointId => {
+      devices[d.endpointId] = d;
+      return devices;
+    },
+    {},
+  );
+  return devicesByEndpointId[endpointId]?.roomName;
 }

@@ -1,5 +1,5 @@
 declare namespace LightsService.API {
-  interface RoomState {
+  interface IRoomState {
     on: boolean;
   }
 }

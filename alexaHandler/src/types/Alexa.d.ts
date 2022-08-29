@@ -3,6 +3,10 @@
 // sometimes the scope is under payload (for discovery requests) and sometimes it is under endpoint (for command requests)
 
 declare namespace Alexa.API {
+  export interface RequestContext {
+    succeed: (resp: Response) => void;
+  }
+
   export interface Request {
     directive: Directive;
   }
@@ -149,11 +153,11 @@ declare namespace Alexa.API {
 
   export interface EndpointsItem {
     endpointId: string;
-    manufacturerName: string;
+    manufacturerName?: string;
     friendlyName: string;
-    description: string;
+    description?: string;
     displayCategories: string[];
-    cookie: Cookie;
+    cookie?: Cookie;
     capabilities: CapabilitiesItem[];
   }
 
@@ -173,8 +177,8 @@ declare namespace Alexa.API {
 
   export interface Properties {
     supported: SupportedItem[];
-    proactivelyReported: boolean;
-    retrievable: boolean;
+    proactivelyReported?: boolean;
+    retrievable?: boolean;
   }
 
   export interface SupportedItem {

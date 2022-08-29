@@ -57,7 +57,9 @@ async function handleAuthorization(
   const bearerToken = getBearerTokenFromRequest(request);
   const requestCode = request.directive.payload.grant?.code || '';
   await generateReturnChannelAccessToken(bearerToken, requestCode);
-  context.succeed(generateAcceptGrantResponse());
+  const resp = generateAcceptGrantResponse();
+  console.log('DEBUG: ', 'Accept Grant Resp ', JSON.stringify(resp));
+  context.succeed(resp);
 }
 
 function handleDiscovery(

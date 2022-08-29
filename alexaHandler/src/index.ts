@@ -16,10 +16,6 @@ import {
   generateReturnChannelAccessToken,
 } from './utils/amazonProfile.js';
 
-function log(message, message1, message2): void {
-  console.log(message + message1 + message2);
-}
-
 function cleanseTokenFromRequest(request: Alexa.API.Request): void {
   let bearerToken: string | undefined;
   if (request.directive.header.namespace === 'Alexa.Discovery') {
@@ -70,7 +66,7 @@ function handleDiscovery(
 ): void {
   // Send the discovery response
   const resp = generateDiscoveryResponse();
-  log('DEBUG', 'Discovery Response: ', JSON.stringify(resp));
+  console.log('DEBUG', 'Discovery Response: ', JSON.stringify(resp));
   context.succeed(resp);
 }
 
@@ -105,7 +101,7 @@ async function handlePowerControl(
     endpointId,
     requestToken,
   );
-  log('DEBUG', 'Alexa.PowerController ', JSON.stringify(response));
+  console.log('DEBUG', 'Alexa.PowerController ', JSON.stringify(response));
   context.succeed(response);
 }
 
@@ -135,20 +131,20 @@ export async function handler(
 ): Promise<void> {
   if (!(await isVerifiedUser(getBearerTokenFromRequest(request)))) {
     const unauthResp = generateInvalidAuthCredResponse();
-    log('DEBUG:', 'unauthorised response:', JSON.stringify(unauthResp));
+    console.log('DEBUG:', 'unauthorised response:', JSON.stringify(unauthResp));
     context.succeed(unauthResp);
   } else if (
     request.directive.header.namespace === 'Alexa.Discovery' &&
     request.directive.header.name === 'Discover'
   ) {
-    log('DEBUG:', 'Discover request ', JSON.stringify(request));
+    console.log('DEBUG:', 'Discover request');
     handleDiscovery(request, context);
   } else if (request.directive.header.namespace === 'Alexa.PowerController') {
     if (
       request.directive.header.name === 'TurnOn' ||
       request.directive.header.name === 'TurnOff'
     ) {
-      log('DEBUG:', 'TurnOn or TurnOff Request ', JSON.stringify(request));
+      console.log('DEBUG:', 'TurnOn or TurnOff Request ');
       await handlePowerControl(request, context);
     }
   } else if (
@@ -163,9 +159,9 @@ export async function handler(
     await handleAuthorization(request, context);
   } else {
     cleanseTokenFromRequest(request);
-    log('DEBUG:', 'unhandled request ', JSON.stringify(request));
+    console.log('DEBUG:', 'unhandled request ', JSON.stringify(request));
   }
 
   cleanseTokenFromRequest(request);
-  log('DEBUG:', 'handled request ', JSON.stringify(request));
+  console.log('DEBUG:', 'handled request ', JSON.stringify(request));
 }

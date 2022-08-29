@@ -2,11 +2,12 @@ import { v4 as uuidV4 } from 'uuid';
 import { deviceDefinitions, IDeviceDefinition } from './config.js';
 
 function generateAlexaHeader(
+  namespace: string,
   name: string,
   correlationToken?: string,
 ): Alexa.API.Header {
   return {
-    namespace: 'Alexa',
+    namespace,
     name,
     messageId: uuidV4(),
     correlationToken,
@@ -17,7 +18,7 @@ function generateAlexaHeader(
 export function generateInvalidAuthCredResponse(): Alexa.API.Response {
   return {
     event: {
-      header: generateAlexaHeader('ErrorResponse'),
+      header: generateAlexaHeader('Alexa', 'ErrorResponse'),
       payload: {
         type: 'INVALID_AUTHORIZATION_CREDENTIAL',
         message: 'you are not authorized to use this skill',
@@ -27,8 +28,10 @@ export function generateInvalidAuthCredResponse(): Alexa.API.Response {
 }
 
 export function generateAcceptGrantResponse(): Alexa.API.Response {
-  const header = generateAlexaHeader('AcceptGrant.Response');
-  header.namespace = 'Alexa.Authorization';
+  const header = generateAlexaHeader(
+    'Alexa.Authorization',
+    'AcceptGrant.Response',
+  );
   return {
     event: {
       header: header,
@@ -86,7 +89,7 @@ function generateDiscoveryObjForDevice(
 export function generateDiscoveryResponse(): Alexa.API.Response {
   return {
     event: {
-      header: generateAlexaHeader('Discover.Response'),
+      header: generateAlexaHeader('Alexa.Discovery', 'Discover.Response'),
       payload: {
         endpoints: deviceDefinitions.map((d) =>
           generateDiscoveryObjForDevice(d),
@@ -125,7 +128,7 @@ export function generatePowerUpdateResp(
   return {
     context: contextResult,
     event: {
-      header: generateAlexaHeader('Response'),
+      header: generateAlexaHeader('Alexa', 'Response'),
       endpoint: {
         scope: {
           type: 'BearerToken',
@@ -146,7 +149,7 @@ export function generateStateReportResponse(
   const now = new Date().toISOString();
   return {
     event: {
-      header: generateAlexaHeader('StateReport', correlationToken),
+      header: generateAlexaHeader('Alexa', 'StateReport', correlationToken),
       endpoint: {
         endpointId,
       },

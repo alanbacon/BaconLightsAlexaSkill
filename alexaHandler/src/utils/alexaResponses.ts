@@ -27,9 +27,11 @@ export function generateInvalidAuthCredResponse(): Alexa.API.Response {
 }
 
 export function generateAcceptGrantResponse(): Alexa.API.Response {
+  const header = generateAlexaHeader('AcceptGrant.Response');
+  header.namespace = 'Alexa.Authorization';
   return {
     event: {
-      header: generateAlexaHeader('AcceptGrant.Response'),
+      header: header,
       payload: {},
     },
   };

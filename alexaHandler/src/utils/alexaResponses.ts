@@ -46,6 +46,17 @@ function generateDiscoveryObjForDevice(
   const baseEndpoint: Alexa.API.EndpointsItem = {
     endpointId: device.endpointId,
     friendlyName: device.friendlyName,
+    cookie: {},
+    description: device.friendlyName,
+    additionalAttributes: {
+      manufacturer: 'Knotanti',
+      model: 'Knotanti Room',
+      serialNumber: 'U11112233456',
+      firmwareVersion: '1.24.2546',
+      softwareVersion: '1.036',
+      customIdentifier: 'Sample custom ID',
+    },
+    manufacturerName: 'Knotanti',
     displayCategories: ['LIGHT'],
     capabilities: [
       {

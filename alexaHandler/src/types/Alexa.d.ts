@@ -153,17 +153,24 @@ declare namespace Alexa.API {
 
   export interface EndpointsItem {
     endpointId: string;
-    manufacturerName?: string;
+    manufacturerName: string;
     friendlyName: string;
-    description?: string;
+    description: string;
+    additionalAttributes: AdditionalAttributes;
     displayCategories: string[];
-    cookie?: Cookie;
+    cookie: Cookie;
     capabilities: CapabilitiesItem[];
   }
 
-  export interface Cookie {
-    detail1?: string;
-    detail2?: string;
+  export type Cookie = Record<string, string>;
+
+  export interface AdditionalAttributes {
+    manufacturer: string;
+    model: string;
+    serialNumber: string;
+    firmwareVersion: string;
+    softwareVersion: string;
+    customIdentifier: string;
   }
 
   export interface CapabilitiesItem {

@@ -70,7 +70,7 @@ function generateDiscoveryObjForDevice(
             },
           ],
           retrievable: true,
-          proactivelyReported: true,
+          //proactivelyReported: true,
         },
       },
       {
@@ -93,6 +93,97 @@ function generateDiscoveryObjForDevice(
       },
     ],
   };
+
+  if (device.brightnessControl) {
+    baseEndpoint.capabilities.push({
+      type: 'AlexaInterface',
+      interface: 'Alexa.BrightnessController',
+      version: '3',
+      properties: {
+        supported: [
+          {
+            name: 'brightness',
+          },
+        ],
+        //proactivelyReported: true,
+        retrievable: true,
+      },
+      configuration: {
+        supportedRange: {
+          minimumValue: 5,
+          maximumValue: 100,
+          precision: 10,
+        },
+        presets: [
+          {
+            rangeValue: 20,
+            presetResources: {
+              friendlyNames: [
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'very dim',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            rangeValue: 40,
+            presetResources: {
+              friendlyNames: [
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'dim',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            rangeValue: 60,
+            presetResources: {
+              friendlyNames: [
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'medium',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            rangeValue: 80,
+            presetResources: {
+              friendlyNames: [
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'bright',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            rangeValue: 80,
+            presetResources: {
+              friendlyNames: [
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'very bright',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
+  }
 
   return baseEndpoint;
 }
@@ -152,13 +243,87 @@ export function generatePowerUpdateResp(
   };
 }
 
+export function generateBrightnessUpdateResp(
+  newBrightnessPerc: number,
+  messageId: string,
+  endpointId: string,
+  requestToken: string,
+): Alexa.API.Response {
+  const now = new Date().toISOString();
+  const contextResult: Alexa.API.Context = {
+    properties: [
+      {
+        namespace: 'Alexa.BrightnessController',
+        name: 'brightness',
+        value: newBrightnessPerc,
+        timeOfSample: now,
+        uncertaintyInMilliseconds: 0,
+      },
+      {
+        namespace: 'Alexa.EndpointHealth', // Always include EndpointHealth in your Alexa.Response
+        name: 'connectivity',
+        value: {
+          value: 'OK',
+        },
+        timeOfSample: now,
+        uncertaintyInMilliseconds: 0,
+      },
+    ],
+  };
+  return {
+    context: contextResult,
+    event: {
+      header: generateAlexaHeader('Alexa', 'Response', messageId),
+      endpoint: {
+        scope: {
+          type: 'BearerToken',
+          token: requestToken,
+        },
+        endpointId,
+      },
+      payload: {},
+    },
+  };
+}
+
 export function generateStateReportResponse(
   roomState: LightsService.API.IRoomState,
   endpointId: string,
   correlationToken: string,
 ): Alexa.API.Response {
   const now = new Date().toISOString();
-  return {
+
+  const properties: Alexa.API.PropertiesItem[] = [
+    {
+      namespace: 'Alexa.PowerController',
+      name: 'powerState',
+      value: roomState.on ? 'ON' : 'OFF',
+      timeOfSample: now,
+      uncertaintyInMilliseconds: 0,
+    },
+    {
+      namespace: 'Alexa.EndpointHealth',
+      name: 'connectivity',
+      value: {
+        value: 'OK',
+      },
+      timeOfSample: now,
+      uncertaintyInMilliseconds: 0,
+    },
+  ];
+
+  if ('brightness' in roomState) {
+    roomState as LightsService.API.IRegRoomState;
+    properties.push({
+      namespace: 'Alexa.BrightnessController',
+      name: 'brightness',
+      value: roomState.brightness * 100,
+      timeOfSample: now,
+      uncertaintyInMilliseconds: 0,
+    });
+  }
+
+  const stateResp = {
     event: {
       header: generateAlexaHeader('Alexa', 'StateReport', correlationToken),
       endpoint: {
@@ -167,24 +332,9 @@ export function generateStateReportResponse(
       payload: {},
     },
     context: {
-      properties: [
-        {
-          namespace: 'Alexa.PowerController',
-          name: 'powerState',
-          value: roomState.on ? 'ON' : 'OFF',
-          timeOfSample: now,
-          uncertaintyInMilliseconds: 0,
-        },
-        {
-          namespace: 'Alexa.EndpointHealth',
-          name: 'connectivity',
-          value: {
-            value: 'OK',
-          },
-          timeOfSample: now,
-          uncertaintyInMilliseconds: 0,
-        },
-      ],
+      properties,
     },
   };
+
+  return stateResp;
 }

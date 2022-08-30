@@ -13,6 +13,7 @@ export interface IDeviceDefinition {
   friendlyName: string;
   endpointId: string;
   roomName: string;
+  brightnessControl: boolean;
 }
 
 export const config: IConfig = {
@@ -31,25 +32,30 @@ export const deviceDefinitions: IDeviceDefinition[] = [
     friendlyName: 'Study Lights',
     endpointId: 'studyLights',
     roomName: 'study',
+    brightnessControl: true,
   },
   {
     friendlyName: 'Bedroom Lights',
     endpointId: 'bedroomLights',
     roomName: 'bedroom',
+    brightnessControl: true,
   },
   {
     friendlyName: 'Living Room Lights',
     endpointId: 'livingRoomLights',
     roomName: 'lounge',
+    brightnessControl: true,
   },
   {
     friendlyName: 'Dinning Room Lights',
     endpointId: 'dinningRoomLights',
     roomName: 'dinning',
+    brightnessControl: true,
   },
   {
     friendlyName: 'Kitchen Lights',
     endpointId: 'kitchenLights',
     roomName: 'kitchen',
+    brightnessControl: false,
   },
 ];

@@ -1,6 +1,7 @@
 import {
   switchPowerOff,
   switchPowerOn,
+  setRoomBrightness,
   getRoomState,
   getRoomNameFromEndpointId,
 } from './utils/lightsService.js';
@@ -9,6 +10,7 @@ import {
   generateInvalidAuthCredResponse,
   generateDiscoveryResponse,
   generatePowerUpdateResp,
+  generateBrightnessUpdateResp,
   generateStateReportResponse,
 } from './utils/alexaResponses.js';
 import {
@@ -107,6 +109,49 @@ async function handlePowerControl(
   context.succeed(response);
 }
 
+async function handleBrightnessControl(
+  request: Alexa.API.Request,
+  context: Alexa.API.RequestContext,
+): Promise<void> {
+  const messageId = request.directive.header.messageId;
+  const requestMethod = request.directive.header.name;
+  const requestToken = getBearerTokenFromRequest(request);
+  const endpointId = request.directive.endpoint?.endpointId || '';
+  const roomName = getRoomNameFromEndpointId(endpointId);
+  if (!roomName) {
+    throw new Error('unable to map endpointId to room name');
+  }
+
+  let newBrightness: number;
+  if (requestMethod === 'SetBrightness') {
+    newBrightness = (request.directive.payload.brightness || 100) / 100;
+  } else {
+    const deltaBrightness =
+      (request.directive.payload.brightnessDelta || 100) / 100;
+    const roomState = (await getRoomState(
+      roomName,
+    )) as LightsService.API.IRegRoomState;
+    newBrightness = roomState.brightness + deltaBrightness;
+  }
+
+  if (newBrightness > 1) {
+    newBrightness = 1;
+  } else if (newBrightness < 0) {
+    newBrightness = 0;
+  }
+
+  await setRoomBrightness(roomName, newBrightness);
+
+  const resp = generateBrightnessUpdateResp(
+    newBrightness * 100,
+    messageId,
+    endpointId,
+    requestToken,
+  );
+
+  context.succeed(resp);
+}
+
 async function handleStateReport(
   request: Alexa.API.Request,
   context: Alexa.API.RequestContext,
@@ -148,6 +193,16 @@ export async function handler(
     ) {
       console.log('DEBUG:', 'TurnOn or TurnOff Request ');
       await handlePowerControl(request, context);
+    }
+  } else if (
+    request.directive.header.namespace === 'Alexa.BrightnessController'
+  ) {
+    if (
+      request.directive.header.name === 'SetBrightness' ||
+      request.directive.header.name === 'AdjustBrightness'
+    ) {
+      console.log('DEBUG:', 'Brightness Request ');
+      await handleBrightnessControl(request, context);
     }
   } else if (
     request.directive.header.namespace === 'Alexa' &&

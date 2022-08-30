@@ -72,6 +72,22 @@ export async function switchPowerOff(roomName: string): Promise<void> {
   }
 }
 
+export async function setRoomBrightness(
+  roomName: string,
+  brightness: number,
+): Promise<void> {
+  const resp = await fetchPopulateBody(
+    `${config.lightsServiceApiUrl}/room/${roomName}/setBrightness/${brightness}`,
+    {
+      headers: lightsServiceHeaders,
+      method: 'PUT',
+    },
+  );
+  if (!resp.ok) {
+    throw new Error('failed to set brightness');
+  }
+}
+
 export async function getRoomState(
   roomName: string,
 ): Promise<LightsService.API.IRoomState> {

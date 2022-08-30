@@ -25,6 +25,8 @@ declare namespace Alexa.API {
     type?: string;
     message?: string;
     estimatedDeferralInSeconds?: number;
+    brightness?: number;
+    brightnessDelta?: number;
   }
 
   export interface Grant {
@@ -178,8 +180,36 @@ declare namespace Alexa.API {
     interface: string;
     version: string;
     properties?: Properties;
+    configuration?: Configuration;
     supportsDeactivation?: boolean;
     cameraStreamConfigurations?: CameraStreamConfigurationsItem[];
+  }
+
+  export interface Configuration {
+    supportedRange?: SupportedRange;
+    presets?: Preset[];
+  }
+
+  export interface SupportedRange {
+    minimumValue: number;
+    maximumValue: number;
+    precision: number;
+  }
+
+  export interface Preset {
+    rangeValue: number;
+    presetResources: {
+      friendlyNames: PresetFriendlyName[];
+    };
+  }
+
+  export interface PresetFriendlyName {
+    '@type': string;
+    value: {
+      assetId?: string;
+      text?: string;
+      locale?: string;
+    };
   }
 
   export interface Properties {

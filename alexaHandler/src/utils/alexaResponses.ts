@@ -115,9 +115,9 @@ function generateDiscoveryObjForDevice(
       capabilityResources: {
         friendlyNames: [
           {
-            '@type': 'text',
+            '@type': 'asset',
             value: {
-              text: 'brightness',
+              assetId: 'Alexa.Setting.Mode',
             },
           },
         ],
@@ -135,6 +135,7 @@ function generateDiscoveryObjForDevice(
                       '@type': 'text',
                       value: {
                         text: presetName,
+                        locale: 'en-UK',
                       },
                     };
                   },

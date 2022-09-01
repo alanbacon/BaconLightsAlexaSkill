@@ -9,11 +9,18 @@ interface IConfig {
   allowedUserEmails: string[];
 }
 
+export interface IBrightnessMode {
+  modeName: string;
+  presetNames: string[];
+  brightnessValue: number;
+}
+
 export interface IDeviceDefinition {
   friendlyName: string;
   endpointId: string;
   roomName: string;
-  brightnessControl: boolean;
+  brightnessRangeControl: boolean;
+  brightnessModes?: IBrightnessMode[];
 }
 
 export const config: IConfig = {
@@ -32,30 +39,47 @@ export const deviceDefinitions: IDeviceDefinition[] = [
     friendlyName: 'Study Lights',
     endpointId: 'studyLights',
     roomName: 'study',
-    brightnessControl: true,
+    brightnessRangeControl: true,
   },
   {
     friendlyName: 'Bedroom Lights',
     endpointId: 'bedroomLights',
     roomName: 'bedroom',
-    brightnessControl: true,
+    brightnessRangeControl: true,
   },
   {
     friendlyName: 'Living Room Lights',
     endpointId: 'livingRoomLights',
     roomName: 'lounge',
-    brightnessControl: true,
+    brightnessRangeControl: true,
   },
   {
     friendlyName: 'Dinning Room Lights',
     endpointId: 'dinningRoomLights',
     roomName: 'dinning',
-    brightnessControl: true,
+    brightnessRangeControl: true,
   },
   {
     friendlyName: 'Kitchen Lights',
     endpointId: 'kitchenLights',
     roomName: 'kitchen',
-    brightnessControl: false,
+    brightnessRangeControl: false,
+    brightnessModes: [
+      {
+        modeName: 'dim',
+        presetNames: ['dim', 'low', 'ambient'],
+        brightnessValue: 0.1,
+      },
+      {
+        modeName: 'medium',
+        presetNames: ['medium', 'half-brightness', 'soft'],
+        brightnessValue: 0.501,
+      },
+      {
+        modeName: 'bright',
+        presetNames: ['bright'],
+        brightnessValue: 1,
+      },
+    ],
   },
 ];

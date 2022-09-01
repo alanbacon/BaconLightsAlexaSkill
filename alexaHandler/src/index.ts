@@ -2,6 +2,9 @@ import {
   switchPowerOff,
   switchPowerOn,
   setRoomBrightness,
+  setRoomBrightnessMode,
+  setNextRoomBrightnessMode,
+  getRoomBrightnessMode,
   getRoomState,
   getRoomNameFromEndpointId,
 } from './utils/lightsService.js';
@@ -11,12 +14,14 @@ import {
   generateDiscoveryResponse,
   generatePowerUpdateResp,
   generateBrightnessUpdateResp,
+  generateBrightnessModeUpdateResp,
   generateStateReportResponse,
 } from './utils/alexaResponses.js';
 import {
   isVerifiedUser,
   generateReturnChannelAccessToken,
 } from './utils/amazonProfile.js';
+import { IBrightnessMode } from './utils/config.js';
 
 function cleanseTokenFromRequest(request: Alexa.API.Request): void {
   let bearerToken: string | undefined;
@@ -152,6 +157,38 @@ async function handleBrightnessControl(
   context.succeed(resp);
 }
 
+async function handleBrightnessMode(
+  request: Alexa.API.Request,
+  context: Alexa.API.RequestContext,
+): Promise<void> {
+  const messageId = request.directive.header.messageId;
+  const requestMethod = request.directive.header.name;
+  const requestToken = getBearerTokenFromRequest(request);
+  const endpointId = request.directive.endpoint?.endpointId || '';
+  const roomName = getRoomNameFromEndpointId(endpointId);
+  if (!roomName) {
+    throw new Error('unable to map endpointId to room name');
+  }
+
+  let newModeName: string;
+  if (requestMethod === 'SetMode') {
+    const modeName = request.directive.payload.mode || '';
+    await setRoomBrightnessMode(roomName, modeName);
+    newModeName = modeName;
+  } else {
+    const delta = request.directive.payload.modeDelta || 0;
+    newModeName = await setNextRoomBrightnessMode(roomName, delta);
+  }
+
+  const resp = generateBrightnessModeUpdateResp(
+    newModeName,
+    messageId,
+    endpointId,
+    requestToken,
+  );
+  context.succeed(resp);
+}
+
 async function handleStateReport(
   request: Alexa.API.Request,
   context: Alexa.API.RequestContext,
@@ -164,10 +201,18 @@ async function handleStateReport(
   }
   const roomState = await getRoomState(roomName);
 
+  let brightnessMode: IBrightnessMode | undefined = undefined;
+  if (roomState._name === 'kitchen') {
+    const { brightnessModes, brightnessModeIndex } =
+      await getRoomBrightnessMode(roomName);
+    brightnessMode = brightnessModes[brightnessModeIndex];
+  }
+
   const response = generateStateReportResponse(
     roomState,
     endpointId,
     correlationToken,
+    brightnessMode,
   );
   context.succeed(response);
 }
@@ -203,6 +248,11 @@ export async function handler(
     ) {
       console.log('DEBUG:', 'Brightness Request ');
       await handleBrightnessControl(request, context);
+    }
+  } else if (request.directive.header.namespace === 'Alexa.ModeController') {
+    if (request.directive.header.instance === 'BrightnessMode') {
+      console.log('DEBUG:', 'Brightness Mode Request ');
+      await handleBrightnessMode(request, context);
     }
   } else if (
     request.directive.header.namespace === 'Alexa' &&

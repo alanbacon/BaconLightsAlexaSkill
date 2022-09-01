@@ -1,5 +1,9 @@
 import { v4 as uuidV4 } from 'uuid';
-import { deviceDefinitions, IDeviceDefinition } from './config.js';
+import {
+  deviceDefinitions,
+  IDeviceDefinition,
+  IBrightnessMode,
+} from './config.js';
 
 function generateAlexaHeader(
   namespace: string,
@@ -43,6 +47,106 @@ export function generateAcceptGrantResponse(): Alexa.API.Response {
 function generateDiscoveryObjForDevice(
   device: IDeviceDefinition,
 ): Alexa.API.EndpointsItem {
+  const capabilities: Alexa.API.CapabilitiesItem[] = [
+    {
+      interface: 'Alexa.PowerController',
+      version: '3',
+      type: 'AlexaInterface',
+      properties: {
+        supported: [
+          {
+            name: 'powerState',
+          },
+        ],
+        retrievable: true,
+        //proactivelyReported: true,
+      },
+    },
+    {
+      type: 'AlexaInterface',
+      interface: 'Alexa.EndpointHealth',
+      version: '3.2',
+      properties: {
+        supported: [
+          {
+            name: 'connectivity',
+          },
+        ],
+        retrievable: true,
+      },
+    },
+    {
+      type: 'AlexaInterface',
+      interface: 'Alexa',
+      version: '3',
+    },
+  ];
+
+  if (device.brightnessRangeControl) {
+    capabilities.push({
+      type: 'AlexaInterface',
+      interface: 'Alexa.BrightnessController',
+      version: '3',
+      properties: {
+        supported: [{ name: 'brightness' }],
+        //proactivelyReported: true,
+        retrievable: true,
+      },
+      configuration: {
+        supportedRange: {
+          minimumValue: 5,
+          maximumValue: 100,
+          precision: 10,
+        },
+      },
+    });
+  }
+
+  if (device.brightnessModes) {
+    capabilities.push({
+      type: 'AlexaInterface',
+      interface: 'Alexa.ModeController',
+      instance: 'BrightnessMode',
+      version: '3',
+      properties: {
+        supported: [{ name: 'mode' }],
+        retrievable: true,
+      },
+      capabilityResources: {
+        friendlyNames: [
+          {
+            '@type': 'text',
+            value: {
+              text: 'brightness',
+            },
+          },
+        ],
+      },
+      configuration: {
+        ordered: true,
+        supportedModes: device.brightnessModes.map(
+          (brightnessMode): Alexa.API.SupportedMode => {
+            return {
+              value: brightnessMode.modeName,
+              modeResources: {
+                friendlyNames: brightnessMode.presetNames.map(
+                  (presetName): Alexa.API.PresetFriendlyName => {
+                    return {
+                      '@type': 'text',
+                      value: {
+                        text: presetName,
+                      },
+                    };
+                  },
+                ),
+              },
+            };
+          },
+        ),
+      },
+    });
+  }
+
   const baseEndpoint: Alexa.API.EndpointsItem = {
     endpointId: device.endpointId,
     friendlyName: device.friendlyName,
@@ -58,132 +162,8 @@ function generateDiscoveryObjForDevice(
     },
     manufacturerName: 'Knotanti',
     displayCategories: ['LIGHT'],
-    capabilities: [
-      {
-        interface: 'Alexa.PowerController',
-        version: '3',
-        type: 'AlexaInterface',
-        properties: {
-          supported: [
-            {
-              name: 'powerState',
-            },
-          ],
-          retrievable: true,
-          //proactivelyReported: true,
-        },
-      },
-      {
-        type: 'AlexaInterface',
-        interface: 'Alexa.EndpointHealth',
-        version: '3.2',
-        properties: {
-          supported: [
-            {
-              name: 'connectivity',
-            },
-          ],
-          retrievable: true,
-        },
-      },
-      {
-        type: 'AlexaInterface',
-        interface: 'Alexa',
-        version: '3',
-      },
-    ],
+    capabilities,
   };
-
-  if (device.brightnessControl) {
-    baseEndpoint.capabilities.push({
-      type: 'AlexaInterface',
-      interface: 'Alexa.BrightnessController',
-      version: '3',
-      properties: {
-        supported: [
-          {
-            name: 'brightness',
-          },
-        ],
-        //proactivelyReported: true,
-        retrievable: true,
-      },
-      configuration: {
-        supportedRange: {
-          minimumValue: 5,
-          maximumValue: 100,
-          precision: 10,
-        },
-        presets: [
-          {
-            rangeValue: 20,
-            presetResources: {
-              friendlyNames: [
-                {
-                  '@type': 'text',
-                  value: {
-                    text: 'very dim',
-                  },
-                },
-              ],
-            },
-          },
-          {
-            rangeValue: 40,
-            presetResources: {
-              friendlyNames: [
-                {
-                  '@type': 'text',
-                  value: {
-                    text: 'dim',
-                  },
-                },
-              ],
-            },
-          },
-          {
-            rangeValue: 60,
-            presetResources: {
-              friendlyNames: [
-                {
-                  '@type': 'text',
-                  value: {
-                    text: 'medium',
-                  },
-                },
-              ],
-            },
-          },
-          {
-            rangeValue: 80,
-            presetResources: {
-              friendlyNames: [
-                {
-                  '@type': 'text',
-                  value: {
-                    text: 'bright',
-                  },
-                },
-              ],
-            },
-          },
-          {
-            rangeValue: 80,
-            presetResources: {
-              friendlyNames: [
-                {
-                  '@type': 'text',
-                  value: {
-                    text: 'very bright',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      },
-    });
-  }
 
   return baseEndpoint;
 }
@@ -286,10 +266,55 @@ export function generateBrightnessUpdateResp(
   };
 }
 
+export function generateBrightnessModeUpdateResp(
+  newModeName: string,
+  messageId: string,
+  endpointId: string,
+  requestToken: string,
+): Alexa.API.Response {
+  const now = new Date().toISOString();
+  const contextResult: Alexa.API.Context = {
+    properties: [
+      {
+        namespace: 'Alexa.ModeController',
+        name: 'mode',
+        instance: 'BrightnessMode',
+        value: newModeName,
+        timeOfSample: now,
+        uncertaintyInMilliseconds: 0,
+      },
+      {
+        namespace: 'Alexa.EndpointHealth', // Always include EndpointHealth in your Alexa.Response
+        name: 'connectivity',
+        value: {
+          value: 'OK',
+        },
+        timeOfSample: now,
+        uncertaintyInMilliseconds: 0,
+      },
+    ],
+  };
+  return {
+    context: contextResult,
+    event: {
+      header: generateAlexaHeader('Alexa', 'Response', messageId),
+      endpoint: {
+        scope: {
+          type: 'BearerToken',
+          token: requestToken,
+        },
+        endpointId,
+      },
+      payload: {},
+    },
+  };
+}
+
 export function generateStateReportResponse(
   roomState: LightsService.API.IRoomState,
   endpointId: string,
   correlationToken: string,
+  brightnessMode?: IBrightnessMode,
 ): Alexa.API.Response {
   const now = new Date().toISOString();
 
@@ -318,6 +343,15 @@ export function generateStateReportResponse(
       namespace: 'Alexa.BrightnessController',
       name: 'brightness',
       value: roomState.brightness * 100,
+      timeOfSample: now,
+      uncertaintyInMilliseconds: 0,
+    });
+  } else if (brightnessMode) {
+    properties.push({
+      namespace: 'Alexa.ModeController',
+      instance: 'BrightnessMode',
+      name: 'mode',
+      value: brightnessMode.modeName,
       timeOfSample: now,
       uncertaintyInMilliseconds: 0,
     });

@@ -1,6 +1,11 @@
 import https from 'https';
 import fetch, { Response } from 'node-fetch';
-import { config, deviceDefinitions, IDeviceDefinition } from './config.js';
+import {
+  config,
+  deviceDefinitions,
+  IDeviceDefinition,
+  IBrightnessMode,
+} from './config.js';
 import { getLightServiceCert } from './secrets.js';
 
 let httpsAgent: https.Agent;
@@ -103,6 +108,82 @@ export async function getRoomState(
   }
 
   return resp.populatedBody as LightsService.API.IRoomState;
+}
+
+export async function getRoomBrightnessMode(roomName: string): Promise<{
+  brightnessModes: IBrightnessMode[];
+  brightnessModeIndex: number;
+}> {
+  const roomState = await getRoomState(roomName);
+  if (roomName === 'kitchen') {
+    const kitchenRoomState = roomState as LightsService.API.IKitchenRoomState;
+    const kitchenDeviceDef = deviceDefinitions.filter(
+      (dd) => dd.roomName === 'kitchen',
+    )[0];
+    const brightnessModes =
+      kitchenDeviceDef.brightnessModes as IBrightnessMode[];
+    let brightnessModeIndex: number;
+    if (kitchenRoomState.spotBrightness > 250) {
+      brightnessModeIndex = 2;
+    } else if (kitchenRoomState.spotBrightness < 20) {
+      brightnessModeIndex = 0;
+    } else {
+      brightnessModeIndex = 1;
+    }
+    return {
+      brightnessModes,
+      brightnessModeIndex,
+    };
+  } else {
+    throw new Error(`cannot get brightness mode for room ${roomName}`);
+  }
+}
+
+export async function setRoomBrightnessMode(
+  roomName: string,
+  modeName: string,
+): Promise<void> {
+  const deviceDef = deviceDefinitions.filter(
+    (dd) => dd.roomName === roomName,
+  )[0];
+  if (!deviceDef) {
+    throw new Error(
+      `unable to find device definition for roomName: ${roomName}`,
+    );
+  }
+  const brightnessModes = deviceDef.brightnessModes;
+  if (!brightnessModes) {
+    throw new Error(
+      `device definition ${deviceDef.roomName} does not have brightness modes`,
+    );
+  }
+  const brightnessMode = brightnessModes.filter(
+    (bm) => bm.modeName === modeName,
+  )[0];
+  if (!brightnessMode) {
+    throw new Error(`could not find brightness mode ${modeName}`);
+  }
+  await setRoomBrightness(roomName, brightnessMode.brightnessValue);
+}
+
+export async function setNextRoomBrightnessMode(
+  roomName: string,
+  modeDelta: number,
+): Promise<string> {
+  const { brightnessModes, brightnessModeIndex } = await getRoomBrightnessMode(
+    roomName,
+  );
+  let newBrightnessModeIndex = brightnessModeIndex + modeDelta;
+  if (newBrightnessModeIndex >= brightnessModes.length) {
+    newBrightnessModeIndex = brightnessModes.length - 1;
+  } else if (newBrightnessModeIndex < 0) {
+    newBrightnessModeIndex = 0;
+  }
+
+  const newBrightnessMode = brightnessModes[newBrightnessModeIndex];
+  const newBrightnessModeName = newBrightnessMode.modeName;
+  await setRoomBrightnessMode(roomName, newBrightnessModeName);
+  return newBrightnessModeName;
 }
 
 type DevicesByEndpointId = Record<string, IDeviceDefinition | undefined>;

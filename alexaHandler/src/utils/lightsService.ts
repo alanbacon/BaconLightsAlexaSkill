@@ -204,7 +204,7 @@ export async function setRoomFadeMode(
     );
   }
 
-  if (!deviceDef.fadeControl) {
+  if (!deviceDef.brightnessRangeControl) {
     throw new Error(
       `device definition ${deviceDef.roomName} does not have fade modes`,
     );

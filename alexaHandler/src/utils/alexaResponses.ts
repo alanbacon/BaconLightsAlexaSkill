@@ -135,7 +135,7 @@ function generateDiscoveryObjForDevice(
                       '@type': 'text',
                       value: {
                         text: presetName,
-                        locale: 'en-UK',
+                        locale: 'en-GB',
                       },
                     };
                   },

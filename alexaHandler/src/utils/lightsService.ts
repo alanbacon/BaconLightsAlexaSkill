@@ -94,6 +94,29 @@ export async function setRoomBrightness(
   }
 }
 
+export async function setRoomFade(
+  roomName: string,
+  fade: boolean,
+): Promise<void> {
+  if (fade) {
+    const resp = await fetchPopulateBody(
+      `${config.lightsServiceApiUrl}/room/${roomName}/fadeToBlack`,
+      {
+        headers: lightsServiceHeaders,
+        method: 'PUT',
+      },
+    );
+    if (!resp.ok) {
+      throw new Error('failed to set fade to black');
+    }
+  } else {
+    const roomState = (await getRoomState(
+      roomName,
+    )) as LightsService.API.IRegRoomState;
+    await setRoomBrightness(roomName, roomState.brightness);
+  }
+}
+
 export async function getRoomState(
   roomName: string,
 ): Promise<LightsService.API.IRoomState> {
@@ -166,6 +189,28 @@ export async function setRoomBrightnessMode(
   }
   await switchPowerOn(roomName);
   await setRoomBrightness(roomName, brightnessMode.brightnessValue);
+}
+
+export async function setRoomFadeMode(
+  roomName: string,
+  modeName: string,
+): Promise<void> {
+  const deviceDef = deviceDefinitions.filter(
+    (dd) => dd.roomName === roomName,
+  )[0];
+  if (!deviceDef) {
+    throw new Error(
+      `unable to find device definition for roomName: ${roomName}`,
+    );
+  }
+
+  if (!deviceDef.fadeControl) {
+    throw new Error(
+      `device definition ${deviceDef.roomName} does not have fade modes`,
+    );
+  }
+
+  await setRoomFade(roomName, modeName === 'fade');
 }
 
 export async function setNextRoomBrightnessMode(

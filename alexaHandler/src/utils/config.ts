@@ -34,6 +34,11 @@ export const config: IConfig = {
   allowedUserEmails: ['the_resonance@hotmail.com'],
 };
 
+export const ModeInstanceNames = {
+  BrightnessMode: 'BrightnessMode',
+  FadeMode: 'FadeMode',
+};
+
 export const deviceDefinitions: IDeviceDefinition[] = [
   {
     friendlyName: 'Study Lights',

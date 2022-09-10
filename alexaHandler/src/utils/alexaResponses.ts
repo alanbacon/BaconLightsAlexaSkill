@@ -3,6 +3,7 @@ import {
   deviceDefinitions,
   IDeviceDefinition,
   IBrightnessMode,
+  ModeInstanceNames,
 } from './config.js';
 
 function generateAlexaHeader(
@@ -100,13 +101,81 @@ function generateDiscoveryObjForDevice(
         },
       },
     });
+
+    capabilities.push({
+      type: 'AlexaInterface',
+      interface: 'Alexa.ModeController',
+      instance: ModeInstanceNames.FadeMode,
+      version: '3',
+      properties: {
+        supported: [{ name: 'fade' }],
+        retrievable: true,
+      },
+      capabilityResources: {
+        friendlyNames: [
+          {
+            '@type': 'asset',
+            value: {
+              assetId: 'Alexa.Setting.Mode',
+            },
+          },
+        ],
+      },
+      configuration: {
+        ordered: false,
+        supportedModes: [
+          {
+            value: 'fade',
+            modeResources: {
+              friendlyNames: [
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'fade',
+                    locale: 'en-GB',
+                  },
+                },
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'on',
+                    locale: 'en-GB',
+                  },
+                },
+              ],
+            },
+          },
+          {
+            value: 'no fade',
+            modeResources: {
+              friendlyNames: [
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'no fade',
+                    locale: 'en-GB',
+                  },
+                },
+                {
+                  '@type': 'text',
+                  value: {
+                    text: 'off',
+                    locale: 'en-GB',
+                  },
+                },
+              ],
+            },
+          },
+        ],
+      },
+    });
   }
 
   if (device.brightnessModes) {
     capabilities.push({
       type: 'AlexaInterface',
       interface: 'Alexa.ModeController',
-      instance: 'BrightnessMode',
+      instance: ModeInstanceNames.BrightnessMode,
       version: '3',
       properties: {
         supported: [{ name: 'mode' }],
@@ -267,8 +336,9 @@ export function generateBrightnessUpdateResp(
   };
 }
 
-export function generateBrightnessModeUpdateResp(
+export function generateModeUpdateResp(
   newModeName: string,
+  modeInstance: string,
   messageId: string,
   endpointId: string,
   requestToken: string,
@@ -279,7 +349,7 @@ export function generateBrightnessModeUpdateResp(
       {
         namespace: 'Alexa.ModeController',
         name: 'mode',
-        instance: 'BrightnessMode',
+        instance: modeInstance,
         value: newModeName,
         timeOfSample: now,
         uncertaintyInMilliseconds: 0,

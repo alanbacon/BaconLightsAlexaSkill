@@ -3,6 +3,7 @@ import {
   switchPowerOn,
   setRoomBrightness,
   setRoomBrightnessMode,
+  setRoomFadeMode,
   setNextRoomBrightnessMode,
   getRoomBrightnessMode,
   getRoomState,
@@ -14,14 +15,14 @@ import {
   generateDiscoveryResponse,
   generatePowerUpdateResp,
   generateBrightnessUpdateResp,
-  generateBrightnessModeUpdateResp,
+  generateModeUpdateResp,
   generateStateReportResponse,
 } from './utils/alexaResponses.js';
 import {
   isVerifiedUser,
   generateReturnChannelAccessToken,
 } from './utils/amazonProfile.js';
-import { IBrightnessMode } from './utils/config.js';
+import { IBrightnessMode, ModeInstanceNames } from './utils/config.js';
 
 function cleanseTokenFromRequest(request: Alexa.API.Request): void {
   let bearerToken: string | undefined;
@@ -180,8 +181,33 @@ async function handleBrightnessMode(
     newModeName = await setNextRoomBrightnessMode(roomName, delta);
   }
 
-  const resp = generateBrightnessModeUpdateResp(
+  const resp = generateModeUpdateResp(
     newModeName,
+    ModeInstanceNames.BrightnessMode,
+    messageId,
+    endpointId,
+    requestToken,
+  );
+  context.succeed(resp);
+}
+
+async function handleFadeMode(
+  request: Alexa.API.Request,
+  context: Alexa.API.RequestContext,
+): Promise<void> {
+  const messageId = request.directive.header.messageId;
+  const requestToken = getBearerTokenFromRequest(request);
+  const endpointId = request.directive.endpoint?.endpointId || '';
+  const roomName = getRoomNameFromEndpointId(endpointId);
+  if (!roomName) {
+    throw new Error('unable to map endpointId to room name');
+  }
+
+  const modeName = request.directive.payload.mode || '';
+  await setRoomFadeMode(roomName, modeName);
+  const resp = generateModeUpdateResp(
+    modeName,
+    ModeInstanceNames.FadeMode,
     messageId,
     endpointId,
     requestToken,
@@ -250,9 +276,16 @@ export async function handler(
       await handleBrightnessControl(request, context);
     }
   } else if (request.directive.header.namespace === 'Alexa.ModeController') {
-    if (request.directive.header.instance === 'BrightnessMode') {
+    if (
+      request.directive.header.instance === ModeInstanceNames.BrightnessMode
+    ) {
       console.log('DEBUG:', 'Brightness Mode Request ');
       await handleBrightnessMode(request, context);
+    } else if (
+      request.directive.header.instance === ModeInstanceNames.FadeMode
+    ) {
+      console.log('DEBUG:', 'Fade Mode Request ');
+      await handleFadeMode(request, context);
     }
   } else if (
     request.directive.header.namespace === 'Alexa' &&

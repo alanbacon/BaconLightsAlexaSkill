@@ -72,12 +72,12 @@ export const deviceDefinitions: IDeviceDefinition[] = [
       },
       {
         modeName: 'medium',
-        presetNames: ['medium', 'half-brightness', 'soft'],
+        presetNames: ['medium', 'half-brightness', 'soft', 'fifty percent'],
         brightnessValue: 0.501,
       },
       {
         modeName: 'bright',
-        presetNames: ['bright'],
+        presetNames: ['full brightness', 'full', 'one hundred percent'],
         brightnessValue: 1,
       },
     ],

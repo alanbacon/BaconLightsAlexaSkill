@@ -81,6 +81,7 @@ export async function setRoomBrightness(
   roomName: string,
   brightness: number,
 ): Promise<void> {
+  await switchPowerOn(roomName);
   const resp = await fetchPopulateBody(
     `${config.lightsServiceApiUrl}/room/${roomName}/setBrightness/${brightness}`,
     {
@@ -163,6 +164,7 @@ export async function setRoomBrightnessMode(
   if (!brightnessMode) {
     throw new Error(`could not find brightness mode ${modeName}`);
   }
+  await switchPowerOn(roomName);
   await setRoomBrightness(roomName, brightnessMode.brightnessValue);
 }
 
@@ -182,6 +184,7 @@ export async function setNextRoomBrightnessMode(
 
   const newBrightnessMode = brightnessModes[newBrightnessModeIndex];
   const newBrightnessModeName = newBrightnessMode.modeName;
+  await switchPowerOn(roomName);
   await setRoomBrightnessMode(roomName, newBrightnessModeName);
   return newBrightnessModeName;
 }

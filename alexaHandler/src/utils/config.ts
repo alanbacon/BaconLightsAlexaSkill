@@ -15,12 +15,20 @@ export interface IBrightnessMode {
   brightnessValue: number;
 }
 
+export interface IBrightnessLevel {
+  levelName: string;
+  presetNames: string[];
+  level: number;
+}
+
 export interface IDeviceDefinition {
   friendlyName: string;
   endpointId: string;
-  roomName: string;
+  roomName?: string;
+  roomGroupName?: string;
   brightnessRangeControl: boolean;
   brightnessModes?: IBrightnessMode[];
+  brightnessLevels?: IBrightnessLevel[];
 }
 
 export const config: IConfig = {
@@ -37,6 +45,7 @@ export const config: IConfig = {
 export const ModeInstanceNames = {
   BrightnessMode: 'BrightnessMode',
   FadeMode: 'FadeMode',
+  BrightnessLevel: 'BrightnessLevel',
 };
 
 export const deviceDefinitions: IDeviceDefinition[] = [
@@ -72,7 +81,7 @@ export const deviceDefinitions: IDeviceDefinition[] = [
     brightnessModes: [
       {
         modeName: 'dim',
-        presetNames: ['dim', 'low', 'ambient'],
+        presetNames: ['dim', 'dimmest', 'low', 'lowest', 'ambient'],
         brightnessValue: 0.1,
       },
       {
@@ -84,6 +93,50 @@ export const deviceDefinitions: IDeviceDefinition[] = [
         modeName: 'bright',
         presetNames: ['full brightness', 'full', 'one hundred percent'],
         brightnessValue: 1,
+      },
+    ],
+  },
+  {
+    friendlyName: 'Downstairs Lights',
+    endpointId: 'downstairsLights',
+    roomGroupName: 'downstairs',
+    brightnessRangeControl: false,
+    brightnessLevels: [
+      {
+        levelName: 'veryDim',
+        presetNames: ['very dim', 'dimmest', 'lowest', 'level one'],
+        level: 0,
+      },
+      {
+        levelName: 'dim',
+        presetNames: ['dim', 'low', 'ambient', 'level two'],
+        level: 1,
+      },
+      {
+        levelName: 'medium',
+        presetNames: [
+          'medium',
+          'half-brightness',
+          'soft',
+          'fifty percent',
+          'level three',
+        ],
+        level: 2,
+      },
+      {
+        levelName: 'bright',
+        presetNames: ['almost full brightness', 'almost full', 'level four'],
+        level: 3,
+      },
+      {
+        levelName: 'veryBright',
+        presetNames: [
+          'full brightness',
+          'full',
+          'one hundred percent',
+          'level five',
+        ],
+        level: 4,
       },
     ],
   },

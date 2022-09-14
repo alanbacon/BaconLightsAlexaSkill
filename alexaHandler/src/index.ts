@@ -5,8 +5,11 @@ import {
   setRoomBrightnessMode,
   setRoomFadeMode,
   setNextRoomBrightnessMode,
+  setRoomGroupBrightnessLevel,
+  setNextRoomGroupBrightnessLevel,
   getRoomBrightnessMode,
   getRoomState,
+  getRoomGroupState,
   getRoomNameFromEndpointId,
 } from './utils/lightsService.js';
 import {
@@ -22,7 +25,12 @@ import {
   isVerifiedUser,
   generateReturnChannelAccessToken,
 } from './utils/amazonProfile.js';
-import { IBrightnessMode, ModeInstanceNames } from './utils/config.js';
+import {
+  IBrightnessMode,
+  ModeInstanceNames,
+  deviceDefinitions,
+  IBrightnessLevel,
+} from './utils/config.js';
 
 function cleanseTokenFromRequest(request: Alexa.API.Request): void {
   let bearerToken: string | undefined;
@@ -89,8 +97,8 @@ async function handlePowerControl(
   // get user token pass in request
   const requestToken = getBearerTokenFromRequest(request);
   const endpointId = request.directive.endpoint?.endpointId || '';
-  const roomName = getRoomNameFromEndpointId(endpointId);
-  if (!roomName) {
+  const { name, type } = getRoomNameFromEndpointId(endpointId);
+  if (!name) {
     throw new Error('unable to map endpointId to room name');
   }
   let powerResult: 'ON' | 'OFF';
@@ -98,12 +106,12 @@ async function handlePowerControl(
   if (requestMethod === 'TurnOn') {
     // Make the call to your device cloud for control
     // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
-    await switchPowerOn(roomName);
+    await switchPowerOn(name, type === 'group');
     powerResult = 'ON';
   } else {
     // Make the call to your device cloud for control and check for success
     // powerResult = stubControlFunctionToYourCloud(endpointId, token, request);
-    await switchPowerOff(roomName);
+    await switchPowerOff(name, type === 'group');
     powerResult = 'OFF';
   }
   const response = generatePowerUpdateResp(
@@ -123,7 +131,7 @@ async function handleBrightnessControl(
   const requestMethod = request.directive.header.name;
   const requestToken = getBearerTokenFromRequest(request);
   const endpointId = request.directive.endpoint?.endpointId || '';
-  const roomName = getRoomNameFromEndpointId(endpointId);
+  const { name: roomName } = getRoomNameFromEndpointId(endpointId);
   if (!roomName) {
     throw new Error('unable to map endpointId to room name');
   }
@@ -166,7 +174,7 @@ async function handleBrightnessMode(
   const requestMethod = request.directive.header.name;
   const requestToken = getBearerTokenFromRequest(request);
   const endpointId = request.directive.endpoint?.endpointId || '';
-  const roomName = getRoomNameFromEndpointId(endpointId);
+  const { name: roomName } = getRoomNameFromEndpointId(endpointId);
   if (!roomName) {
     throw new Error('unable to map endpointId to room name');
   }
@@ -191,6 +199,39 @@ async function handleBrightnessMode(
   context.succeed(resp);
 }
 
+async function handleBrightnessLevel(
+  request: Alexa.API.Request,
+  context: Alexa.API.RequestContext,
+): Promise<void> {
+  const messageId = request.directive.header.messageId;
+  const requestMethod = request.directive.header.name;
+  const requestToken = getBearerTokenFromRequest(request);
+  const endpointId = request.directive.endpoint?.endpointId || '';
+  const { name: roomGroupName } = getRoomNameFromEndpointId(endpointId);
+  if (!roomGroupName) {
+    throw new Error('unable to map endpointId to room group name');
+  }
+
+  let newLevelName: string;
+  if (requestMethod === 'SetMode') {
+    const modeName = request.directive.payload.mode || '';
+    await setRoomGroupBrightnessLevel(roomGroupName, modeName);
+    newLevelName = modeName;
+  } else {
+    const delta = request.directive.payload.modeDelta || 0;
+    newLevelName = await setNextRoomGroupBrightnessLevel(roomGroupName, delta);
+  }
+
+  const resp = generateModeUpdateResp(
+    newLevelName,
+    ModeInstanceNames.BrightnessLevel,
+    messageId,
+    endpointId,
+    requestToken,
+  );
+  context.succeed(resp);
+}
+
 async function handleFadeMode(
   request: Alexa.API.Request,
   context: Alexa.API.RequestContext,
@@ -198,7 +239,7 @@ async function handleFadeMode(
   const messageId = request.directive.header.messageId;
   const requestToken = getBearerTokenFromRequest(request);
   const endpointId = request.directive.endpoint?.endpointId || '';
-  const roomName = getRoomNameFromEndpointId(endpointId);
+  const { name: roomName } = getRoomNameFromEndpointId(endpointId);
   if (!roomName) {
     throw new Error('unable to map endpointId to room name');
   }
@@ -221,24 +262,56 @@ async function handleStateReport(
 ): Promise<void> {
   const correlationToken = request.directive.header.messageId;
   const endpointId = request.directive.endpoint?.endpointId || '';
-  const roomName = getRoomNameFromEndpointId(endpointId);
-  if (!roomName) {
-    throw new Error('unable to map endpointId to room name');
+  const { name, type } = getRoomNameFromEndpointId(endpointId);
+  if (!name) {
+    throw new Error('unable to map endpointId to room[Group] name');
   }
-  const roomState = await getRoomState(roomName);
 
+  let isOn: boolean;
   let brightnessMode: IBrightnessMode | undefined = undefined;
-  if (roomState._name === 'kitchen') {
-    const { brightnessModes, brightnessModeIndex } =
-      await getRoomBrightnessMode(roomName);
-    brightnessMode = brightnessModes[brightnessModeIndex];
+  let brightness: number | undefined;
+  let brightnessLevel: IBrightnessLevel | undefined = undefined;
+  let fadeActive: boolean | undefined = undefined;
+  if (type === 'room') {
+    const roomState = await getRoomState(name);
+    isOn = roomState.on;
+    if (roomState._name === 'kitchen') {
+      const { brightnessModes, brightnessModeIndex } =
+        await getRoomBrightnessMode(name);
+      brightnessMode = brightnessModes[brightnessModeIndex];
+    } else {
+      brightness = (roomState as LightsService.API.IRegRoomState).brightness;
+      fadeActive = (roomState as LightsService.API.IRegRoomState)
+        ._autoBrightnessActive;
+    }
+  } else {
+    const roomGroupState = await getRoomGroupState(name);
+    isOn = roomGroupState.on;
+    const deviceDef = deviceDefinitions.filter(
+      (dd) => dd.roomGroupName === name,
+    )[0];
+    if (!deviceDef) {
+      throw new Error(
+        `unable to find device definition for roomGroupName: ${name}`,
+      );
+    }
+    const brightnessLevels = deviceDef.brightnessLevels;
+    if (!brightnessLevels) {
+      throw new Error(
+        `device definition ${deviceDef.roomGroupName} does not have brightness levels`,
+      );
+    }
+    brightnessLevel = brightnessLevels[roomGroupState.brightnessLevelMin];
   }
 
   const response = generateStateReportResponse(
-    roomState,
     endpointId,
     correlationToken,
+    isOn,
+    brightness,
     brightnessMode,
+    brightnessLevel,
+    fadeActive,
   );
   context.succeed(response);
 }
@@ -286,6 +359,11 @@ export async function handler(
     ) {
       console.log('DEBUG:', 'Fade Mode Request ');
       await handleFadeMode(request, context);
+    } else if (
+      request.directive.header.instance === ModeInstanceNames.BrightnessLevel
+    ) {
+      console.log('DEBUG:', 'Brightness Level Request ');
+      await handleBrightnessLevel(request, context);
     }
   } else if (
     request.directive.header.namespace === 'Alexa' &&

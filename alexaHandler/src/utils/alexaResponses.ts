@@ -3,6 +3,7 @@ import {
   deviceDefinitions,
   IDeviceDefinition,
   IBrightnessMode,
+  IBrightnessLevel,
   ModeInstanceNames,
 } from './config.js';
 
@@ -215,6 +216,50 @@ function generateDiscoveryObjForDevice(
         ),
       },
     });
+  } else if (device.brightnessLevels) {
+    capabilities.push({
+      type: 'AlexaInterface',
+      interface: 'Alexa.ModeController',
+      instance: ModeInstanceNames.BrightnessLevel,
+      version: '3',
+      properties: {
+        supported: [{ name: 'mode' }],
+        retrievable: true,
+      },
+      capabilityResources: {
+        friendlyNames: [
+          {
+            '@type': 'asset',
+            value: {
+              assetId: 'Alexa.Setting.Mode',
+            },
+          },
+        ],
+      },
+      configuration: {
+        ordered: true,
+        supportedModes: device.brightnessLevels.map(
+          (brightnessLevel): Alexa.API.SupportedMode => {
+            return {
+              value: brightnessLevel.levelName,
+              modeResources: {
+                friendlyNames: brightnessLevel.presetNames.map(
+                  (presetName): Alexa.API.PresetFriendlyName => {
+                    return {
+                      '@type': 'text',
+                      value: {
+                        text: presetName,
+                        locale: 'en-GB',
+                      },
+                    };
+                  },
+                ),
+              },
+            };
+          },
+        ),
+      },
+    });
   }
 
   const baseEndpoint: Alexa.API.EndpointsItem = {
@@ -382,10 +427,13 @@ export function generateModeUpdateResp(
 }
 
 export function generateStateReportResponse(
-  roomState: LightsService.API.IRoomState,
   endpointId: string,
   correlationToken: string,
+  isOn: boolean,
+  brightness?: number,
   brightnessMode?: IBrightnessMode,
+  brightnessLevel?: IBrightnessLevel,
+  fadeActive?: boolean,
 ): Alexa.API.Response {
   const now = new Date().toISOString();
 
@@ -393,7 +441,7 @@ export function generateStateReportResponse(
     {
       namespace: 'Alexa.PowerController',
       name: 'powerState',
-      value: roomState.on ? 'ON' : 'OFF',
+      value: isOn ? 'ON' : 'OFF',
       timeOfSample: now,
       uncertaintyInMilliseconds: 0,
     },
@@ -408,21 +456,44 @@ export function generateStateReportResponse(
     },
   ];
 
-  if ('brightness' in roomState) {
-    roomState as LightsService.API.IRegRoomState;
+  if (brightness) {
     properties.push({
       namespace: 'Alexa.BrightnessController',
       name: 'brightness',
-      value: roomState.brightness * 100,
+      value: brightness * 100,
       timeOfSample: now,
       uncertaintyInMilliseconds: 0,
     });
-  } else if (brightnessMode) {
+  }
+
+  if (brightnessMode) {
     properties.push({
       namespace: 'Alexa.ModeController',
-      instance: 'BrightnessMode',
+      instance: ModeInstanceNames.BrightnessMode,
       name: 'mode',
       value: brightnessMode.modeName,
+      timeOfSample: now,
+      uncertaintyInMilliseconds: 0,
+    });
+  }
+
+  if (brightnessLevel) {
+    properties.push({
+      namespace: 'Alexa.ModeController',
+      instance: ModeInstanceNames.BrightnessLevel,
+      name: 'mode',
+      value: brightnessLevel.levelName,
+      timeOfSample: now,
+      uncertaintyInMilliseconds: 0,
+    });
+  }
+
+  if (fadeActive) {
+    properties.push({
+      namespace: 'Alexa.ModeController',
+      instance: ModeInstanceNames.FadeMode,
+      name: 'mode',
+      value: fadeActive ? 'fade' : 'no fade',
       timeOfSample: now,
       uncertaintyInMilliseconds: 0,
     });

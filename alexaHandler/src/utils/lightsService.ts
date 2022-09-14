@@ -49,9 +49,14 @@ async function fetchPopulateBody(
   return resp;
 }
 
-export async function switchPowerOn(roomName: string): Promise<void> {
+export async function switchPowerOn(
+  roomName: string,
+  isGroup?: boolean,
+): Promise<void> {
   const resp = await fetchPopulateBody(
-    `${config.lightsServiceApiUrl}/room/${roomName}/power`,
+    `${config.lightsServiceApiUrl}/${
+      isGroup ? 'group' : 'room'
+    }/${roomName}/power`,
     {
       headers: lightsServiceHeaders,
       method: 'PUT',
@@ -63,9 +68,14 @@ export async function switchPowerOn(roomName: string): Promise<void> {
   }
 }
 
-export async function switchPowerOff(roomName: string): Promise<void> {
+export async function switchPowerOff(
+  roomName: string,
+  isGroup?: boolean,
+): Promise<void> {
   const resp = await fetchPopulateBody(
-    `${config.lightsServiceApiUrl}/room/${roomName}/power`,
+    `${config.lightsServiceApiUrl}/${
+      isGroup ? 'group' : 'room'
+    }/${roomName}/power`,
     {
       headers: lightsServiceHeaders,
       method: 'PUT',
@@ -75,6 +85,44 @@ export async function switchPowerOff(roomName: string): Promise<void> {
   if (!resp.ok) {
     throw new Error('failed to set power');
   }
+}
+
+export async function setRoomGroupLevel(
+  roomGroupName: string,
+  level: number,
+): Promise<void> {
+  const resp = await fetchPopulateBody(
+    `${config.lightsServiceApiUrl}/group/${roomGroupName}/brightnessLevel/${level}`,
+    {
+      headers: lightsServiceHeaders,
+      method: 'PUT',
+      body: JSON.stringify({ on: false }),
+    },
+  );
+  if (!resp.ok) {
+    throw new Error('failed to set power');
+  }
+}
+
+export async function setNextRoomGroupLevel(
+  roomGroupName: string,
+  increase?: boolean,
+): Promise<number> {
+  const resp = await fetchPopulateBody(
+    `${config.lightsServiceApiUrl}/group/${roomGroupName}/${
+      increase ? 'brightnessLevelIncrease' : 'brightnessLevelDecrease'
+    }`,
+    {
+      headers: lightsServiceHeaders,
+      method: 'POST',
+    },
+  );
+  if (!resp.ok) {
+    throw new Error('failed to set next brightness level');
+  }
+
+  return ((await resp.populatedBody) as { newBrightnessLevel: number })
+    .newBrightnessLevel;
 }
 
 export async function setRoomBrightness(
@@ -132,6 +180,23 @@ export async function getRoomState(
   }
 
   return resp.populatedBody as LightsService.API.IRoomState;
+}
+
+export async function getRoomGroupState(
+  roomGroupName: string,
+): Promise<LightsService.API.IRoomGroupState> {
+  const resp = await fetchPopulateBody(
+    `${config.lightsServiceApiUrl}/group/${roomGroupName}`,
+    {
+      headers: lightsServiceHeaders,
+      method: 'GET',
+    },
+  );
+  if (!resp.ok) {
+    throw new Error('failed to get room group state');
+  }
+
+  return resp.populatedBody as LightsService.API.IRoomGroupState;
 }
 
 export async function getRoomBrightnessMode(roomName: string): Promise<{
@@ -236,9 +301,10 @@ export async function setNextRoomBrightnessMode(
 
 type DevicesByEndpointId = Record<string, IDeviceDefinition | undefined>;
 
-export function getRoomNameFromEndpointId(
-  endpointId: string,
-): string | undefined {
+export function getRoomNameFromEndpointId(endpointId: string): {
+  name: string | undefined;
+  type: 'room' | 'group' | undefined;
+} {
   const devicesByEndpointId = deviceDefinitions.reduce(
     (
       devices: DevicesByEndpointId,
@@ -249,5 +315,77 @@ export function getRoomNameFromEndpointId(
     },
     {},
   );
-  return devicesByEndpointId[endpointId]?.roomName;
+
+  const roomName = devicesByEndpointId[endpointId]?.roomName;
+  const roomGroupName = devicesByEndpointId[endpointId]?.roomGroupName;
+
+  if (roomName) {
+    return {
+      name: roomName,
+      type: 'room',
+    };
+  } else if (roomGroupName) {
+    return {
+      name: roomGroupName,
+      type: 'group',
+    };
+  } else {
+    return {
+      name: undefined,
+      type: undefined,
+    };
+  }
+}
+
+export async function setRoomGroupBrightnessLevel(
+  roomGroupName: string,
+  levelName: string,
+): Promise<void> {
+  const deviceDef = deviceDefinitions.filter(
+    (dd) => dd.roomGroupName === roomGroupName,
+  )[0];
+  if (!deviceDef) {
+    throw new Error(
+      `unable to find device definition for roomGroupName: ${roomGroupName}`,
+    );
+  }
+  const brightnessLevels = deviceDef.brightnessLevels;
+  if (!brightnessLevels) {
+    throw new Error(
+      `device definition ${deviceDef.roomGroupName} does not have brightness levels`,
+    );
+  }
+  const brightnessLevel = brightnessLevels.filter(
+    (bm) => bm.levelName === levelName,
+  )[0];
+  if (!brightnessLevel) {
+    throw new Error(`could not find brightness level ${levelName}`);
+  }
+  await setRoomGroupLevel(roomGroupName, brightnessLevel.level);
+}
+
+export async function setNextRoomGroupBrightnessLevel(
+  roomGroupName: string,
+  modeDelta: number,
+): Promise<string> {
+  const deviceDef = deviceDefinitions.filter(
+    (dd) => dd.roomGroupName === roomGroupName,
+  )[0];
+  if (!deviceDef) {
+    throw new Error(
+      `unable to find device definition for roomGroupName: ${roomGroupName}`,
+    );
+  }
+  const brightnessLevels = deviceDef.brightnessLevels;
+  if (!brightnessLevels) {
+    throw new Error(
+      `device definition ${deviceDef.roomGroupName} does not have brightness levels`,
+    );
+  }
+
+  const levelInd = await setNextRoomGroupLevel(roomGroupName, modeDelta > 0);
+
+  const brightnessLevel = brightnessLevels[levelInd];
+
+  return brightnessLevel.levelName;
 }
